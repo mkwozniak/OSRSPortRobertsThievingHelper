@@ -10,5 +10,5 @@ An OSRS Runelite Plugin which assists thieving at Port Roberts stalls.
 * Can play a sound for when a toggled stall is being watched, and a separate sound for when it's safe to steal from.
 * Toggle notifications for each stall.
 
-# Config
+# Config View
 <img width="233" height="728" alt="image" src="https://github.com/user-attachments/assets/9d14b0b5-f58c-4728-bd0b-b587a370360a" />
