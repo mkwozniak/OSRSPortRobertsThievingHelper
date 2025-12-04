@@ -18,7 +18,7 @@ public interface PRThievingHelperConfig extends Config
 			keyName = "drawBoxes",
 			name = "Draw Boxes",
 			description = "Toggle to enable/disable drawing of stall boxes.",
-			section = notifierSettings,
+			section = boxColors,
 			position = 1
 	)
 	default boolean drawBoxes()
