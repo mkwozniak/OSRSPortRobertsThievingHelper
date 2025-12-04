@@ -4,7 +4,7 @@ import net.runelite.client.config.*;
 
 import java.awt.*;
 
-@ConfigGroup("example")
+@ConfigGroup("prthievinghelper")
 public interface PRThievingHelperConfig extends Config
 {
 	@ConfigSection(
