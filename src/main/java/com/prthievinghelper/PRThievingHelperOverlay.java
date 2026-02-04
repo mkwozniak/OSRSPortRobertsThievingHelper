@@ -4,12 +4,11 @@ import com.prthievinghelper.PRThievingHelperPlugin.StallTypes;
 
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
+import net.runelite.api.Point;
+import net.runelite.api.TileObject;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.client.ui.overlay.Overlay;
-import net.runelite.client.ui.overlay.OverlayLayer;
-import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.OverlayPriority;
+import net.runelite.client.ui.overlay.*;
 
 import javax.inject.Inject;
 import java.awt.*;
@@ -43,52 +42,58 @@ public class PRThievingHelperOverlay extends Overlay
     {
         if(config.drawBoxes())
         {
-            stallColors.put(StallTypes.FUR,
-                    (plugin.watching.get(StallTypes.FUR)) ?
-                            config.watchedStallColor() : config.unwatchedStallColor());
-            stallColors.put(StallTypes.SILK,
-                    (plugin.watching.get(StallTypes.SILK)) ?
-                            config.watchedStallColor() : config.unwatchedStallColor());
-            stallColors.put(StallTypes.GEM,
-                    (plugin.watching.get(StallTypes.GEM)) ?
-                            config.watchedStallColor() : config.unwatchedStallColor());
-            stallColors.put(StallTypes.CANNON,
-                    (plugin.watching.get(StallTypes.CANNON)) ?
-                            config.watchedStallColor() : config.unwatchedStallColor());
-            stallColors.put(StallTypes.FISH,
-                    (plugin.watching.get(StallTypes.FISH)) ?
-                            config.watchedStallColor() : config.unwatchedStallColor());
-            stallColors.put(StallTypes.ORE,
-                    (plugin.watching.get(StallTypes.ORE)) ?
-                            config.watchedStallColor() : config.unwatchedStallColor());
-            stallColors.put(StallTypes.SPICE,
-                    (plugin.watching.get(StallTypes.SPICE)) ?
-                            config.watchedStallColor() : config.unwatchedStallColor());
-            stallColors.put(StallTypes.VEG,
-                    (plugin.watching.get(StallTypes.VEG)) ?
-                            config.watchedStallColor() : config.unwatchedStallColor());
-            stallColors.put(StallTypes.SILVER,
-                    (plugin.watching.get(StallTypes.SILVER)) ?
-                            config.watchedStallColor() : config.unwatchedStallColor());
+            for (StallTypes stall : StallTypes.values()) {
+                boolean watched = plugin.STALLS.get(stall).UnwatchedTicksRemaining == 0;
+                stallColors.put(stall,
+                        watched  ?
+                        config.watchedStallColor() : config.unwatchedStallColor());
 
-            renderBox(graphics, plugin.stallPositions.get(StallTypes.FUR), 1, 2,
-                    stallColors.get(StallTypes.FUR), plugin.watching.get(StallTypes.FUR));
-            renderBox(graphics, plugin.stallPositions.get(StallTypes.SILK), 1, 2,
-                    stallColors.get(StallTypes.SILK), plugin.watching.get(StallTypes.SILK));
-            renderBox(graphics, plugin.stallPositions.get(StallTypes.GEM), 1, 2,
-                    stallColors.get(StallTypes.GEM), plugin.watching.get(StallTypes.GEM));
-            renderBox(graphics, plugin.stallPositions.get(StallTypes.CANNON), 1, 2,
-                    stallColors.get(StallTypes.CANNON), plugin.watching.get(StallTypes.CANNON));
-            renderBox(graphics, plugin.stallPositions.get(StallTypes.FISH), 1, 2,
-                    stallColors.get(StallTypes.FISH), plugin.watching.get(StallTypes.FISH));
-            renderBox(graphics, plugin.stallPositions.get(StallTypes.ORE), 1, 2,
-                    stallColors.get(StallTypes.ORE), plugin.watching.get(StallTypes.ORE));
-            renderBox(graphics, plugin.stallPositions.get(StallTypes.SPICE), 1, 2,
-                    stallColors.get(StallTypes.SPICE), plugin.watching.get(StallTypes.SPICE));
-            renderBox(graphics, plugin.stallPositions.get(StallTypes.VEG), 1, 2,
-                    stallColors.get(StallTypes.VEG), plugin.watching.get(StallTypes.VEG));
-            renderBox(graphics, plugin.stallPositions.get(StallTypes.SILVER), 1, 2,
-                    stallColors.get(StallTypes.SILVER), plugin.watching.get(StallTypes.SILVER));
+                renderBox(graphics, plugin.STALLS.get(stall).Position, 1, 2,
+                        stallColors.get(stall), watched);
+            }
+        }
+
+        if (config.enableStallHighlighting())
+        {
+            // Highlight primary stall with primary color
+            TileObject primaryStall = plugin.getPrimaryStallToHighlight();
+            StallTypes primaryStallType = plugin.getPrimaryStallType();
+
+            // Highlight secondary stall with secondary color
+            TileObject secondaryStall = plugin.getSecondaryStallToHighlight();
+            StallTypes secondaryStallType = plugin.getSecondaryStallType();
+
+            if(config.enableTextAttempts())
+            {
+                renderStallAttempts(graphics, primaryStall, primaryStallType, config.primaryHighlightColor());
+                renderStallAttempts(graphics, secondaryStall, secondaryStallType, config.secondaryHighlightColor());
+            }
+
+            if (config.highlightOnlyOneStall())
+            {
+                // Only highlight one stall at a time, prefer primary
+                if (plugin.isStallSafeToClick(primaryStallType))
+                {
+                    renderStallHighlight(graphics, primaryStall, config.primaryHighlightColor());
+                }
+                else if (plugin.isStallSafeToClick(secondaryStallType))
+                {
+                    renderStallHighlight(graphics, secondaryStall, config.secondaryHighlightColor());
+                }
+            }
+            else
+            {
+                // Highlight both stalls when safe
+                if (plugin.isStallSafeToClick(primaryStallType))
+                {
+                    renderStallHighlight(graphics, primaryStall, config.primaryHighlightColor());
+                }
+
+                if (plugin.isStallSafeToClick(secondaryStallType))
+                {
+                    renderStallHighlight(graphics, secondaryStall, config.secondaryHighlightColor());
+                }
+            }
         }
 
         float alpha = plugin.getFlashAlpha();
@@ -181,5 +186,69 @@ public class PRThievingHelperOverlay extends Overlay
         graphics.setColor(strokeColor);
         graphics.setStroke(new BasicStroke(2));
         graphics.drawPolygon(square);
+    }
+
+    private void renderStallHighlight(Graphics2D graphics, TileObject object, Color highlightColor)
+    {
+        // Draw clickbox/outline
+        Shape objectClickbox = object.getClickbox();
+        if (objectClickbox != null)
+        {
+            // Draw fill
+            graphics.setColor(new Color(highlightColor.getRed(),
+                    highlightColor.getGreen(),
+                    highlightColor.getBlue(),
+                    20)); // Semi-transparent fill
+            graphics.fill(objectClickbox);
+
+            // Draw outline
+            graphics.setColor(new Color(highlightColor.getRed(),
+                    highlightColor.getGreen(),
+                    highlightColor.getBlue(),
+                    highlightColor.getAlpha()));
+            graphics.setStroke(new BasicStroke(2));
+            graphics.draw(objectClickbox);
+        }
+    }
+
+    private void renderStallAttempts(Graphics2D graphics, TileObject object,
+                                     StallTypes stallType, Color highlightColor)
+    {
+        if(object == null)
+            return;
+
+        LocalPoint localPoint = object.getLocalLocation();
+        if (localPoint != null)
+        {
+            int ticksLeft = plugin.GetStallUnwatchedTicksRemaining(stallType);
+            Color color = highlightColor;
+            String msg = "" + plugin.GetStallUnwatchedTicksRemaining(stallType);
+
+            if(ticksLeft == 0)
+            {
+                msg = "UNSAFE";
+                color = Color.RED;
+            }
+
+            Point textLocation = Perspective.getCanvasTextLocation(
+                    client,
+                    graphics,
+                    localPoint,
+                    msg,
+                    200 // Z-offset to position text above the object
+            );
+
+            if (textLocation != null)
+            {
+                // Draw text shadow for better visibility
+                graphics.setFont(new Font("Arial", Font.BOLD, 16));
+                graphics.setColor(color);
+                graphics.drawString(msg, textLocation.getX() + 1, textLocation.getY() + 1);
+
+                // Draw the actual text
+                graphics.setColor(color);
+                graphics.drawString(msg, textLocation.getX(), textLocation.getY());
+            }
+        }
     }
 }

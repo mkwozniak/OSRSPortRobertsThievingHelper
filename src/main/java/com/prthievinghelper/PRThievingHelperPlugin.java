@@ -24,7 +24,6 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.api.*;
 import net.runelite.client.ui.overlay.OverlayManager;
-
 import java.util.*;
 
 @Slf4j
@@ -33,123 +32,29 @@ import java.util.*;
 )
 public class PRThievingHelperPlugin extends Plugin
 {
-	public enum StallTypes {
-		FUR, SILK, GEM, CANNON, FISH, ORE, SPICE, VEG, SILVER
+	public class ThievingStall
+	{
+		// static data
+		public final int ID;
+		public final WorldPoint Position;
+		public final List<WorldPoint> WatchPoints;
+
+		// states
+		public boolean IsWatched = false;
+		public boolean UnwatchedNotifier = false;
+		public boolean WatchNotifier = false;
+		public int WatchedTicksRemaining = 0;
+		public int UnwatchedTicksRemaining = 0;
+		public int ThievingTickCounter = 0;
+
+		public ThievingStall(int id, WorldPoint position,
+							 List<WorldPoint> watchPoints)
+		{
+			this.ID = id;
+			this.WatchPoints = watchPoints;
+			this.Position = position;
+		}
 	}
-
-	// Stall object IDs (based on comments in config file)
-	private static final int FUR_STALL_ID = 58102;
-	private static final int SILK_STALL_ID = 58101;
-	private static final int GEM_STALL_ID = 58106;
-	private static final int CANNON_STALL_ID = 58108;
-	private static final int FISH_STALL_ID = 58103;
-	private static final int ORE_STALL_ID = 58107;
-	private static final int SPICE_STALL_ID = 58105;
-	private static final int VEG_STALL_ID = 58100;
-	private static final int SILVER_STALL_ID = 58104;
-
-	private static final Map<StallTypes, Integer> stallObjectIds = Map.of(
-			StallTypes.FUR, FUR_STALL_ID,
-			StallTypes.SILK, SILK_STALL_ID,
-			StallTypes.GEM, GEM_STALL_ID,
-			StallTypes.CANNON, CANNON_STALL_ID,
-			StallTypes.FISH, FISH_STALL_ID,
-			StallTypes.ORE, ORE_STALL_ID,
-			StallTypes.SPICE, SPICE_STALL_ID,
-			StallTypes.VEG, VEG_STALL_ID,
-			StallTypes.SILVER, SILVER_STALL_ID
-	);
-
-	public Map<StallTypes, Boolean> watching = new HashMap<>();
-	
-	// Track when guards arrive at stalls to predict when they'll leave
-	private final Map<StallTypes, Integer> stallWatchTicksRemaining = new HashMap<>();
-	private static final int GUARD_WATCH_DURATION = 10; // Guards watch for 10 ticks
-	private static final int THIEVING_DURATION = 5; // Thieving takes 5 ticks
-	private static final int SAFE_BUFFER_TICKS = 2; // Extra buffer for safety (highlight when ≤2 ticks remain)
-
-	public final Map<StallTypes, WorldPoint> stallPositions = Map.of(
-			StallTypes.FUR, new WorldPoint(1870, 3292, 0),
-			StallTypes.SILK, new WorldPoint(1870, 3295, 0),
-			StallTypes.GEM, new WorldPoint(1869, 3289, 0),
-			StallTypes.CANNON, new WorldPoint(1867, 3296, 0),
-			StallTypes.FISH, new WorldPoint(1861, 3292, 0),
-			StallTypes.ORE, new WorldPoint(1861, 3295, 0),
-			StallTypes.SPICE, new WorldPoint(1863, 3289, 0),
-			StallTypes.VEG, new WorldPoint(1864, 3296, 0),
-			StallTypes.SILVER, new WorldPoint(1866, 3289, 0)
-	);
-
-	private static final List<WorldPoint> furWatchPoints =
-			Arrays.asList(
-					new WorldPoint(1869, 3292, 0),
-					new WorldPoint(1869, 3293, 0),
-					new WorldPoint(1869, 3294, 0)
-					);
-	private static final List<WorldPoint> silkWatchPoints =
-			Arrays.asList(
-					new WorldPoint(1869, 3295, 0),
-					new WorldPoint(1868, 3295, 0)
-			);
-	private static final List<WorldPoint> gemWatchPoints =
-			Arrays.asList(
-					new WorldPoint(1869, 3290, 0),
-					new WorldPoint(1869, 3291, 0)
-			);
-	private static final List<WorldPoint> cannonWatchPoints =
-			Arrays.asList(
-					new WorldPoint(1867, 3295, 0),
-					new WorldPoint(1866, 3295, 0)
-			);
-	private static final List<WorldPoint> fishWatchPoints =
-			Arrays.asList(
-					new WorldPoint(1863, 3292, 0),
-					new WorldPoint(1863, 3291, 0)
-			);
-	private static final List<WorldPoint> oreWatchPoints =
-			Arrays.asList(
-					new WorldPoint(1863, 3294, 0),
-					new WorldPoint(1863, 3293, 0)
-			);
-	private static final List<WorldPoint> spiceWatchPoints =
-			Arrays.asList(
-					new WorldPoint(1864, 3290, 0),
-					new WorldPoint(1865, 3290, 0)
-			);
-	private static final List<WorldPoint> vegWatchPoints =
-			Arrays.asList(
-					new WorldPoint(1865, 3295, 0),
-					new WorldPoint(1864, 3295, 0)
-			);
-	private static final List<WorldPoint> silverWatchPoints =
-			Arrays.asList(
-					new WorldPoint(1866, 3290, 0),
-					new WorldPoint(1867, 3290, 0),
-					new WorldPoint(1868, 3290, 0)
-			);
-
-	private static final Map<StallTypes, List<WorldPoint>> stallWatchPositions = Map.of(
-			StallTypes.FUR, furWatchPoints,
-			StallTypes.SILK, silkWatchPoints,
-			StallTypes.GEM, gemWatchPoints,
-			StallTypes.CANNON, cannonWatchPoints,
-			StallTypes.FISH, fishWatchPoints,
-			StallTypes.ORE, oreWatchPoints,
-			StallTypes.SPICE, spiceWatchPoints,
-			StallTypes.VEG, vegWatchPoints,
-			StallTypes.SILVER, silverWatchPoints
-	);
-
-	private static final String GUARD_NAME = "Market Guard";
-	private static final Set<Integer> GUARD_IDS = Set.of(
-			14881, 14882, 14883
-	);
-	private static final int SOUND_ID_UNWATCHED = 8410;
-	private static final int SOUND_ID_WATCHED = 3814;
-
-	private static final Map<StallTypes, Boolean> notifiers = new HashMap<>();
-	private static final Map<StallTypes, Boolean> watchNotifiers = new HashMap<>();
-	private static final List<NPC> guards = new ArrayList<>();
 
 	@Inject
 	private Client client;
@@ -164,28 +69,116 @@ public class PRThievingHelperPlugin extends Plugin
 	private PRThievingHelperOverlay overlay;
 
 	@Inject
-	private PRThievingHelperObjectOverlay objectOverlay;
-
-	@Inject
 	private Notifier notifier;
 
-	private float flashAlpha = 0f;
+	public enum StallTypes {
+		FUR, SILK, GEM, CANNON, FISH, ORE, SPICE, VEG, SILVER
+	}
 
-	// Object highlighting tracking
+	public final Map<StallTypes, ThievingStall> STALLS = Map.of(
+			StallTypes.FUR, new ThievingStall(58102,
+					new WorldPoint(1870, 3292, 0),
+					Arrays.asList(
+							new WorldPoint(1869, 3292, 0),
+							new WorldPoint(1869, 3293, 0),
+							new WorldPoint(1869, 3294, 0)
+					)),
+
+			StallTypes.SILK, new ThievingStall(58101,
+					new WorldPoint(1870, 3295, 0),
+					Arrays.asList(
+							new WorldPoint(1869, 3295, 0),
+							new WorldPoint(1868, 3295, 0)
+					)),
+
+			StallTypes.GEM, new ThievingStall(58106,
+					new WorldPoint(1869, 3289, 0),
+					Arrays.asList(
+							new WorldPoint(1869, 3290, 0),
+							new WorldPoint(1869, 3291, 0)
+					)),
+
+			StallTypes.CANNON, new ThievingStall(58108,
+					new WorldPoint(1867, 3296, 0),
+					Arrays.asList(
+							new WorldPoint(1867, 3295, 0),
+							new WorldPoint(1866, 3295, 0)
+					)),
+
+			StallTypes.FISH, new ThievingStall(58103,
+					new WorldPoint(1861, 3292, 0),
+					Arrays.asList(
+							new WorldPoint(1863, 3292, 0),
+							new WorldPoint(1863, 3291, 0)
+					)),
+
+			StallTypes.ORE, new ThievingStall(58107,
+					new WorldPoint(1861, 3295, 0),
+					Arrays.asList(
+							new WorldPoint(1863, 3294, 0),
+							new WorldPoint(1863, 3293, 0)
+					)),
+
+			StallTypes.SPICE, new ThievingStall(58105,
+					new WorldPoint(1863, 3289, 0),
+					Arrays.asList(
+							new WorldPoint(1864, 3290, 0),
+							new WorldPoint(1865, 3290, 0)
+					)),
+
+			StallTypes.VEG, new ThievingStall(58100,
+					new WorldPoint(1864, 3296, 0),
+					Arrays.asList(
+							new WorldPoint(1865, 3295, 0),
+							new WorldPoint(1864, 3295, 0)
+					)),
+
+			StallTypes.SILVER, new ThievingStall(58104,
+					new WorldPoint(1866, 3289, 0),
+					Arrays.asList(
+							new WorldPoint(1866, 3290, 0),
+							new WorldPoint(1867, 3290, 0),
+							new WorldPoint(1868, 3290, 0)
+					))
+	);
+
+	private static final int GUARD_WATCH_DURATION = 10; // Guards watch for 10 ticks
+	private static final int THIEVING_DURATION = 5; // Thieving takes 5 ticks
+	private static final int SAFE_BUFFER_TICKS = 1; // Extra tick buffer
+
+	private static final String GUARD_NAME = "Market Guard";
+	private static final Set<Integer> GUARD_IDS = Set.of(
+			14881, 14882, 14883
+	);
+
+	private static final Map<StallTypes, Integer> stallObjectIds = Map.of(
+			StallTypes.FUR, 58102,
+			StallTypes.SILK, 58101,
+			StallTypes.GEM, 58106,
+			StallTypes.CANNON, 58108,
+			StallTypes.FISH, 58103,
+			StallTypes.ORE, 58107,
+			StallTypes.SPICE, 58105,
+			StallTypes.VEG, 58100,
+			StallTypes.SILVER, 58104
+	);
+
+	private static final int SOUND_ID_UNWATCHED = 8410;
+	private static final int SOUND_ID_WATCHED = 3814;
+
 	private final Map<Integer, TileObject> stallObjects = new HashMap<>();
-	private static final int THIEVING_ANIMATION = 881; // Standard thieving animation
+	private static final List<NPC> GUARDS = new ArrayList<>();
+
+	private float flashAlpha = 0f;
 
 	@Override
 	protected void startUp() throws Exception
 	{
 		overlayManager.add(overlay);
-		overlayManager.add(objectOverlay);
-
 		for (StallTypes stall : StallTypes.values()) {
-			watching.put(stall, false);
-			notifiers.put(stall, false);
-			watchNotifiers.put(stall, false);
-			stallWatchTicksRemaining.put(stall, 0);
+			STALLS.get(stall).IsWatched = false;
+			STALLS.get(stall).UnwatchedNotifier = false;
+			STALLS.get(stall).WatchNotifier = false;
 		}
 	}
 
@@ -193,11 +186,8 @@ public class PRThievingHelperPlugin extends Plugin
 	protected void shutDown() throws Exception
 	{
 		overlayManager.remove(overlay);
-		overlayManager.remove(objectOverlay);
-		watching.clear();
-		guards.clear();
+		GUARDS.clear();
 		stallObjects.clear();
-		stallWatchTicksRemaining.clear();
 	}
 
 	@Subscribe
@@ -270,10 +260,10 @@ public class PRThievingHelperPlugin extends Plugin
 		if(!isValidGuard(npc))
 			return;
 
-		if(guards.contains(npc))
+		if(GUARDS.contains(npc))
 			return;
 
-		guards.add(npc);
+		GUARDS.add(npc);
 	}
 
 	@Subscribe
@@ -283,7 +273,7 @@ public class PRThievingHelperPlugin extends Plugin
 		if(!isValidGuard(npc))
 			return;
 
-        guards.remove(npc);
+        GUARDS.remove(npc);
 	}
 
 	@Subscribe
@@ -303,77 +293,124 @@ public class PRThievingHelperPlugin extends Plugin
 	public void onGameTick(GameTick event)
 	{
 		//System.out.println(client.getSelectedSceneTile().getWorldLocation());
-
 		// Update guard watching status and track timing
 		for (StallTypes stall : StallTypes.values())
 		{
-			boolean wasWatching = watching.get(stall);
-			boolean isWatching = isAnyGuardAtPosition(stallWatchPositions.get(stall));
-			watching.put(stall, isWatching);
-			
-			// Track guard watch duration
+			boolean wasWatching = STALLS.get(stall).IsWatched;
+			boolean isWatching = isAnyGuardAtPosition(STALLS.get(stall).WatchPoints);
+			STALLS.get(stall).IsWatched = isWatching;
+
+			// guard just left
+			if(!isWatching && wasWatching)
+			{
+				STALLS.get(stall).ThievingTickCounter = 0;
+			}
+			// guard just arrived
 			if (isWatching && !wasWatching)
 			{
-				// Guard just arrived at this stall
-				stallWatchTicksRemaining.put(stall, GUARD_WATCH_DURATION);
+				STALLS.get(stall).WatchedTicksRemaining = GUARD_WATCH_DURATION;
+				STALLS.get(stall).UnwatchedTicksRemaining = 0;
 			}
+			// guard is currently watching
 			else if (isWatching && wasWatching)
 			{
-				// Guard is still watching, decrement timer
-				int ticksRemaining = stallWatchTicksRemaining.get(stall);
+				int ticksRemaining = STALLS.get(stall).WatchedTicksRemaining;
 				if (ticksRemaining > 0)
 				{
-					stallWatchTicksRemaining.put(stall, ticksRemaining - 1);
+					STALLS.get(stall).WatchedTicksRemaining = ticksRemaining - 1;
+				}
+				if(ticksRemaining == 2)
+				{
+					STALLS.get(stall).UnwatchedTicksRemaining = 4;
 				}
 			}
+			// guard is not watching
 			else if (!isWatching)
 			{
-				// No guard at this stall
-				stallWatchTicksRemaining.put(stall, 0);
+				STALLS.get(stall).WatchedTicksRemaining = 0;
+				STALLS.get(stall).ThievingTickCounter += 1;
+				if(STALLS.get(stall).ThievingTickCounter >= THIEVING_DURATION)
+				{
+					int ticksRemaining = STALLS.get(stall).UnwatchedTicksRemaining;
+					if (ticksRemaining > 0)
+					{
+						STALLS.get(stall).UnwatchedTicksRemaining = ticksRemaining - 1;
+					}
+					STALLS.get(stall).ThievingTickCounter = 0;
+				}
 			}
-		}
 
-		if(config.notifyForFur())
-		{
-			checkNotificationTrigger(StallTypes.GEM, StallTypes.FUR);
-		}
-		if(config.notifyForSilk())
-		{
-			checkNotificationTrigger(StallTypes.FUR, StallTypes.SILK);
-		}
-		if(config.notifyForGem())
-		{
-			checkNotificationTrigger(StallTypes.SILVER, StallTypes.GEM);
-		}
-		if(config.notifyForCannon())
-		{
-			checkNotificationTrigger(StallTypes.SILK, StallTypes.CANNON);
-		}
-		if(config.notifyForFish())
-		{
-			checkNotificationTrigger(StallTypes.ORE, StallTypes.FISH);
-		}
-		if(config.notifyForOre())
-		{
-			checkNotificationTrigger(StallTypes.VEG, StallTypes.ORE);
-		}
-		if(config.notifyForSpice())
-		{
-			checkNotificationTrigger(StallTypes.FISH, StallTypes.SPICE);
-		}
-		if(config.notifyForSilver())
-		{
-			checkNotificationTrigger(StallTypes.SPICE, StallTypes.SILVER);
-		}
-		if(config.notifyForVeg())
-		{
-			checkNotificationTrigger(StallTypes.CANNON, StallTypes.VEG);
+			if(config.primaryStall() != PRThievingHelperConfig.StallSelection.NONE)
+			{
+				if(config.notifyForPrimary())
+				{
+					checkNotificationTrigger(getPrimaryStallType());
+				}
+			}
+
+			if(config.secondaryStall() != PRThievingHelperConfig.StallSelection.NONE)
+			{
+				if(config.notifyForSecondary())
+				{
+					checkNotificationTrigger(getSecondaryStallType());
+				}
+			}
 		}
 	}
 
 	public float getFlashAlpha()
 	{
 		return flashAlpha;
+	}
+
+	public TileObject getPrimaryStallToHighlight()
+	{
+		return getStallObjectToHighlight(config.primaryStall());
+	}
+
+	public TileObject getSecondaryStallToHighlight()
+	{
+		return getStallObjectToHighlight(config.secondaryStall());
+	}
+
+	public StallTypes getPrimaryStallType()
+	{
+		return configStallToStallType(config.primaryStall());
+	}
+
+	public StallTypes getSecondaryStallType()
+	{
+		return configStallToStallType(config.secondaryStall());
+	}
+
+	public int GetStallUnwatchedTicksRemaining(StallTypes stallType)
+	{
+		return STALLS.get(stallType).UnwatchedTicksRemaining;
+	}
+
+	/**
+	 * Checks if a stall is safe to highlight for clicking.
+	 * A stall is safe if:
+	 * - No guard is watching it, OR
+	 * - A guard is watching but will leave within SAFE_BUFFER_TICKS ticks
+	 *   This gives players time to click right before the guard leaves
+	 */
+	public boolean isStallSafeToClick(StallTypes stall)
+	{
+		if (stall == null)
+		{
+			return false;
+		}
+
+		if (!STALLS.get(stall).IsWatched)
+		{
+			// No guard watching, definitely safe
+			return true;
+		}
+
+		// Only highlight when guard is about to leave (≤ SAFE_BUFFER_TICKS remaining)
+		// This ensures the guard leaves before/as the player clicks
+		return STALLS.get(stall).WatchedTicksRemaining == SAFE_BUFFER_TICKS;
 	}
 
 	/**
@@ -393,27 +430,13 @@ public class PRThievingHelperPlugin extends Plugin
 			return null;
 		}
 
-		// Highlight if safe to click (not watched, or guard leaving soon)
-		if (isStallSafeToClick(stallType))
+		Integer objectId = stallObjectIds.get(stallType);
+		if (objectId != null)
 		{
-			Integer objectId = stallObjectIds.get(stallType);
-			if (objectId != null)
-			{
-				return stallObjects.get(objectId);
-			}
+			return stallObjects.get(objectId);
 		}
 		
 		return null;
-	}
-
-	public TileObject getPrimaryStallToHighlight()
-	{
-		return getStallObjectToHighlight(config.primaryStall());
-	}
-
-	public TileObject getSecondaryStallToHighlight()
-	{
-		return getStallObjectToHighlight(config.secondaryStall());
 	}
 
 	private boolean isValidGuard(NPC npc)
@@ -426,39 +449,9 @@ public class PRThievingHelperPlugin extends Plugin
         return npcName.equals(GUARD_NAME) && GUARD_IDS.contains(npcId);
     }
 
-	/**
-	 * Checks if a stall is safe to highlight for clicking.
-	 * A stall is safe if:
-	 * - No guard is watching it, OR
-	 * - A guard is watching but will leave within SAFE_BUFFER_TICKS ticks
-	 *   This gives players time to click right before the guard leaves
-	 */
-	private boolean isStallSafeToClick(StallTypes stall)
-	{
-		if (stall == null)
-		{
-			return false;
-		}
-		
-		boolean isWatched = watching.get(stall);
-		
-		if (!isWatched)
-		{
-			// No guard watching, definitely safe
-			return true;
-		}
-		
-		// Guard is watching - check if it will leave very soon
-		int ticksRemaining = stallWatchTicksRemaining.get(stall);
-		
-		// Only highlight when guard is about to leave (≤ SAFE_BUFFER_TICKS remaining)
-		// This ensures the guard leaves before/as the player clicks
-		return ticksRemaining > 0 && ticksRemaining <= SAFE_BUFFER_TICKS;
-	}
-
 	private boolean isAnyGuardAtPosition(List<WorldPoint> wps)
 	{
-		for(NPC npc: guards)
+		for(NPC npc: GUARDS)
 		{
 			WorldPoint nwp = npc.getWorldLocation();
 			int x = nwp.getX();
@@ -481,53 +474,66 @@ public class PRThievingHelperPlugin extends Plugin
 		flashAlpha = 1f; // fully opaque at start
 	}
 
-	private void checkNotificationTrigger(StallTypes triggerStall, StallTypes stallType)
+	private void checkNotificationTrigger(StallTypes stallType)
 	{
-		// since each stall is ordered, check whether the next stall is watched
-		// if it is:
-		// do any notifications for unwatched status of the previous stall
-
-		// if the trigger stall is activated, the previous stall is unwatched
-		if(watching.get(triggerStall) && !notifiers.get(stallType))
+		// do all unwatched notifs once the safe buffer ticks is reached
+		if(STALLS.get(stallType).WatchedTicksRemaining == SAFE_BUFFER_TICKS)
 		{
-			// if the flash config is on, do the flash
-			if(config.flashForUnwatched())
+			if(!STALLS.get(stallType).UnwatchedNotifier)
 			{
-				triggerFlash();
-				notifiers.put(stallType, true);
+				if(config.flashForUnwatched())
+				{
+					triggerFlash();
+				}
+
+				if(config.notifyForUnwatched())
+				{
+					notifier.notify("Stall Unwatched!");
+				}
+
+				if(config.soundForUnwatched())
+				{
+					client.playSoundEffect(SOUND_ID_UNWATCHED);
+				}
+
+				STALLS.get(stallType).UnwatchedNotifier = true;
 			}
 
-			// if the os notif is on, do the notif
-			if(config.notifyForUnwatched())
-			{
-				notifier.notify("Stall Unwatched!");
-				notifiers.put(stallType, true);
-			}
-
-			if(config.soundForUnwatched())
-			{
-				client.playSoundEffect(SOUND_ID_UNWATCHED);
-				notifiers.put(stallType, true);
-			}
+			STALLS.get(stallType).WatchNotifier = false;
 		}
 
-		// reset the watch notifs
-		if(!watching.get(stallType))
+		// do all watched notifs if no ticks left for unwatched
+		if(STALLS.get(stallType).UnwatchedTicksRemaining == 0)
 		{
-			watchNotifiers.put(stallType, false);
-		}
-
-		// if the stall is watched, reset
-		// also play watched sound if enabled
-		if(watching.get(stallType))
-		{
-			notifiers.put(stallType, false);
-
-			if(config.soundForWatched() && !watchNotifiers.get(stallType))
+			if(!STALLS.get(stallType).WatchNotifier)
 			{
-				client.playSoundEffect(SOUND_ID_WATCHED);
-				watchNotifiers.put(stallType, true);
+				if(config.soundForWatched())
+				{
+					client.playSoundEffect(SOUND_ID_WATCHED);
+				}
+
+				STALLS.get(stallType).WatchNotifier = true;
 			}
+
+			STALLS.get(stallType).UnwatchedNotifier = false;
+		}
+	}
+
+	private StallTypes configStallToStallType(PRThievingHelperConfig.StallSelection selection)
+	{
+		switch (selection)
+		{
+			case CANNONBALL:return StallTypes.CANNON;
+			case VEG: return StallTypes.VEG;
+			case ORE: return StallTypes.ORE;
+			case FISH: return StallTypes.FISH;
+			case SPICE: return StallTypes.SPICE;
+			case SILVER: return StallTypes.SILVER;
+			case GEM: return StallTypes.GEM;
+			case FUR: return StallTypes.FUR;
+			case SILK: return StallTypes.SILK;
+			case NONE:
+			default: return null;
 		}
 	}
 
@@ -535,33 +541,5 @@ public class PRThievingHelperPlugin extends Plugin
 	PRThievingHelperConfig provideConfig(ConfigManager configManager)
 	{
 		return configManager.getConfig(PRThievingHelperConfig.class);
-	}
-
-	private StallTypes configStallToStallType(PRThievingHelperConfig.StallSelection selection)
-	{
-		switch (selection)
-		{
-			case CANNONBALL:
-				return StallTypes.CANNON;
-			case VEG:
-				return StallTypes.VEG;
-			case ORE:
-				return StallTypes.ORE;
-			case FISH:
-				return StallTypes.FISH;
-			case SPICE:
-				return StallTypes.SPICE;
-			case SILVER:
-				return StallTypes.SILVER;
-			case GEM:
-				return StallTypes.GEM;
-			case FUR:
-				return StallTypes.FUR;
-			case SILK:
-				return StallTypes.SILK;
-			case NONE:
-			default:
-				return null;
-		}
 	}
 }

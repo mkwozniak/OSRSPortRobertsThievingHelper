@@ -3,6 +3,7 @@ package com.prthievinghelper;
 import net.runelite.client.config.*;
 
 import java.awt.*;
+import java.util.EnumSet;
 
 @ConfigGroup("prthievinghelper")
 public interface PRThievingHelperConfig extends Config
@@ -123,11 +124,23 @@ public interface PRThievingHelperConfig extends Config
 	}
 
 	@ConfigItem(
+			keyName = "enableTextAttempts",
+			name = "Enable Text Attempts",
+			description = "Shows how many thieving attempts you can do above the stall.",
+			section = stallHighlighting,
+			position = 7
+	)
+	default boolean enableTextAttempts()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 			keyName = "drawBoxes",
 			name = "Draw Boxes",
 			description = "Toggle to enable/disable drawing of stall boxes.",
 			section = boxColors,
-			position = 7
+			position = 8
 	)
 	default boolean drawBoxes()
 	{
@@ -139,7 +152,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Unwatched Stall Color",
 			description = "The Color of Unwatched Stalls",
 			section = boxColors,
-			position = 8
+			position = 9
 	)
 	@Alpha
 	default Color unwatchedStallColor()
@@ -152,7 +165,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Unwatched Stall Border Color",
 			description = "The Border Color of Unwatched Stalls",
 			section = boxColors,
-			position = 9
+			position = 10
 	)
 	@Alpha
 	default Color unwatchedStallBorderColor()
@@ -165,7 +178,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Watched Stall Color",
 			description = "The Color of Watched Stalls",
 			section = boxColors,
-			position = 10
+			position = 11
 	)
 	@Alpha
 	default Color watchedStallColor()
@@ -178,7 +191,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Watched Stall Border Color",
 			description = "The Border Color of Watched Stalls",
 			section = boxColors,
-			position = 11
+			position = 12
 	)
 	@Alpha
 	default Color watchedStallBorderColor()
@@ -189,16 +202,40 @@ public interface PRThievingHelperConfig extends Config
 	@ConfigSection(
 			name = "Notifier Settings",
 			description = "Notifier Settings for unwatched Stalls",
-			position = 12
+			position = 13
 	)
 	String notifierSettings = "notifierSettings";
+
+	@ConfigItem(
+			keyName = "notifyForPrimary",
+			name = "[Primary Stall] Notify",
+			description = "Toggles the Notification/Flash/Sound for the primary stall.",
+			section = notifierSettings,
+			position = 14
+	)
+	default boolean notifyForPrimary()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+			keyName = "notifyForSecondary",
+			name = "[Secondary Stall] Notify",
+			description = "Toggles the Notification/Flash/Sound for the secondary stall.",
+			section = notifierSettings,
+			position = 15
+	)
+	default boolean notifyForSecondary()
+	{
+		return false;
+	}
 
 	@ConfigItem(
 			keyName = "notifyForUnwatched",
 			name = "Idle Notify For Unwatched",
 			description = "Sends an OS notification for toggled unwatched stalls.",
 			section = notifierSettings,
-			position = 13
+			position = 16
 	)
 	default boolean notifyForUnwatched()
 	{
@@ -210,7 +247,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Flash For Unwatched",
 			description = "Flashes the Screen for toggled unwatched stalls.",
 			section = notifierSettings,
-			position = 14
+			position = 17
 	)
 	default boolean flashForUnwatched()
 	{
@@ -222,7 +259,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Sound For Unwatched",
 			description = "Plays a sound for the toggled unwatched stalls.",
 			section = notifierSettings,
-			position = 15
+			position = 18
 	)
 	default boolean soundForUnwatched()
 	{
@@ -234,7 +271,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Sound For Watched",
 			description = "Plays a sound for the toggled watched stalls.",
 			section = notifierSettings,
-			position = 16
+			position = 19
 	)
 	default boolean soundForWatched()
 	{
@@ -246,7 +283,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Screen Flash Color",
 			description = "The Screen Flash Color",
 			section = notifierSettings,
-			position = 17
+			position = 20
 	)
 	@Alpha
 	default Color notifierFlashColor()
@@ -259,7 +296,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Screen Flash Speed",
 			description = "The Screen Flash Speed",
 			section = notifierSettings,
-			position = 18
+			position = 21
 	)
 	default double notifierFlashSpeed()
 	{
@@ -271,7 +308,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Screen Flash Strength",
 			description = "The Screen Flash Color Strength",
 			section = notifierSettings,
-			position = 19
+			position = 22
 	)
 	@Range(
 			min = 1,
@@ -280,114 +317,6 @@ public interface PRThievingHelperConfig extends Config
 	default int notifierFlashStrength()
 	{
 		return 150;
-	}
-
-	@ConfigItem(
-			keyName = "notifyForFur",
-			name = "[ Fur Stall ] Notify",
-			description = "Toggles the Notification/Flash/Sound for unwatched Fur Stalls.",
-			section = notifierSettings,
-			position = 20
-	)
-	default boolean notifyForFur()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "notifyForSilk",
-			name = "[ Silk Stall ] Notify",
-			description = "Toggles the Notification/Flash/Sound for unwatched Silk Stalls.",
-			section = notifierSettings,
-			position = 21
-	)
-	default boolean notifyForSilk()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "notifyForGem",
-			name = "[ Gem Stall ] Notify",
-			description = "Toggles the Notification/Flash/Sound for unwatched Gem Stalls.",
-			section = notifierSettings,
-			position = 22
-	)
-	default boolean notifyForGem()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "notifyForCannon",
-			name = "[ Cannon Stall ] Notify",
-			description = "Toggles the Notification/Flash/Sound for unwatched Cannon Stalls.",
-			section = notifierSettings,
-			position = 23
-	)
-	default boolean notifyForCannon()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "notifyForFish",
-			name = "[ Fish Stall ] Notify",
-			description = "Toggles the Notification/Flash/Sound for unwatched Fish Stalls.",
-			section = notifierSettings,
-			position = 24
-	)
-	default boolean notifyForFish()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "notifyForOre",
-			name = "[ Ore Stall ] Notify",
-			description = "Toggles the Notification/Flash/Sound for unwatched Ore Stalls.",
-			section = notifierSettings,
-			position = 25
-	)
-	default boolean notifyForOre()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "notifyForSpice",
-			name = "[ Spice Stall ] Notify",
-			description = "Toggles the Notification/Flash/Sound for unwatched Spice Stalls.",
-			section = notifierSettings,
-			position = 26
-	)
-	default boolean notifyForSpice()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "notifyForVeg",
-			name = "[ Veg Stall ] Notify",
-			description = "Toggles the Notification/Flash/Sound for unwatched Veg Stalls.",
-			section = notifierSettings,
-			position = 27
-	)
-	default boolean notifyForVeg()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "notifyForSilver",
-			name = "[ Silver Stall ] Notify",
-			description = "Toggles the Notification/Flash/Sound for unwatched Silver Stalls.",
-			section = notifierSettings,
-			position = 28
-	)
-	default boolean notifyForSilver()
-	{
-		return false;
 	}
 
 	// stall positions:
@@ -411,4 +340,15 @@ public interface PRThievingHelperConfig extends Config
 	// gem stall = 1869, 3290
 	// silver stall = 1866, 3290
 	// spice stall = 1864, 3290
+
+	// stall ids:
+	//FUR_STALL_ID = 58102;
+	//SILK_STALL_ID = 58101;
+	//GEM_STALL_ID = 58106;
+	//CANNON_STALL_ID = 58108;
+	//FISH_STALL_ID = 58103;
+	//ORE_STALL_ID = 58107;
+	//SPICE_STALL_ID = 58105;
+	//VEG_STALL_ID = 58100;
+	//SILVER_STALL_ID = 58104;
 }
