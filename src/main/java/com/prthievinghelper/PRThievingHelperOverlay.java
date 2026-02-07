@@ -190,6 +190,9 @@ public class PRThievingHelperOverlay extends Overlay
 
     private void renderStallHighlight(Graphics2D graphics, TileObject object, Color highlightColor)
     {
+        if(object == null)
+            return;
+
         // Draw clickbox/outline
         Shape objectClickbox = object.getClickbox();
         if (objectClickbox != null)
