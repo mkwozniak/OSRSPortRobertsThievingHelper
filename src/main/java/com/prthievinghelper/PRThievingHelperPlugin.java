@@ -5,23 +5,13 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.events.ClientTick;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.NpcDespawned;
-import net.runelite.api.events.NpcSpawned;
-import net.runelite.api.events.GameObjectSpawned;
-import net.runelite.api.events.GameObjectDespawned;
-import net.runelite.api.events.GroundObjectSpawned;
-import net.runelite.api.events.GroundObjectDespawned;
-import net.runelite.api.events.DecorativeObjectSpawned;
-import net.runelite.api.events.DecorativeObjectDespawned;
-import net.runelite.api.events.WallObjectSpawned;
-import net.runelite.api.events.WallObjectDespawned;
+import net.runelite.api.events.*;
 import net.runelite.client.Notifier;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.api.events.StatChanged;
 import net.runelite.api.*;
 import net.runelite.client.ui.overlay.OverlayManager;
 import java.util.*;
@@ -43,6 +33,7 @@ public class PRThievingHelperPlugin extends Plugin
 		public boolean IsWatched = false;
 		public boolean UnwatchedNotifier = false;
 		public boolean WatchNotifier = false;
+		public boolean LastTickExp = false;
 		public int WatchedTicksRemaining = 0;
 		public int UnwatchedTicksRemaining = 0;
 		public int ThievingTickCounter = 0;
@@ -254,6 +245,39 @@ public class PRThievingHelperPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onStatChanged(StatChanged statChanged)
+	{
+		if (statChanged.getSkill() != Skill.THIEVING)
+		{
+			return;
+		}
+
+		if (STALLS.get(getPrimaryStallType()).UnwatchedTicksRemaining == 1)
+		{
+			if(config.soundForWatchedAtExpDrop())
+			{
+				client.playSoundEffect(SOUND_ID_WATCHED);
+			}
+
+			STALLS.get(getPrimaryStallType()).UnwatchedTicksRemaining = 0;
+			STALLS.get(getPrimaryStallType()).IsWatched = true;
+			STALLS.get(getPrimaryStallType()).LastTickExp = true;
+		}
+
+		if (STALLS.get(getSecondaryStallType()).UnwatchedTicksRemaining == 1)
+		{
+			if(config.soundForWatchedAtExpDrop())
+			{
+				client.playSoundEffect(SOUND_ID_WATCHED);
+			}
+
+			STALLS.get(getSecondaryStallType()).UnwatchedTicksRemaining = 0;
+			STALLS.get(getSecondaryStallType()).IsWatched = true;
+			STALLS.get(getSecondaryStallType()).LastTickExp = true;
+		}
+	}
+
+	@Subscribe
 	public void onNpcSpawned(NpcSpawned event)
 	{
 		NPC npc = event.getNpc();
@@ -322,6 +346,7 @@ public class PRThievingHelperPlugin extends Plugin
 				if(ticksRemaining == 2)
 				{
 					STALLS.get(stall).UnwatchedTicksRemaining = 4;
+					STALLS.get(stall).LastTickExp = false;
 				}
 			}
 			// guard is not watching
@@ -355,6 +380,15 @@ public class PRThievingHelperPlugin extends Plugin
 					checkNotificationTrigger(getSecondaryStallType());
 				}
 			}
+		}
+	}
+
+	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		if (event.getGameState() == GameState.LOADING)
+		{
+			stallObjects.clear();
 		}
 	}
 
@@ -402,6 +436,15 @@ public class PRThievingHelperPlugin extends Plugin
 			return false;
 		}
 
+		if(STALLS.get(stall).LastTickExp)
+			return false;
+
+		return !STALLS.get(stall).IsWatched;
+
+		/*
+		if(STALLS.get(stall).IsWatched)
+			return false;
+
 		if (!STALLS.get(stall).IsWatched)
 		{
 			// No guard watching, definitely safe
@@ -411,6 +454,8 @@ public class PRThievingHelperPlugin extends Plugin
 		// Only highlight when guard is about to leave (≤ SAFE_BUFFER_TICKS remaining)
 		// This ensures the guard leaves before/as the player clicks
 		return STALLS.get(stall).WatchedTicksRemaining == SAFE_BUFFER_TICKS;
+		*/
+
 	}
 
 	/**

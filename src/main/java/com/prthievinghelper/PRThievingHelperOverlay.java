@@ -63,6 +63,10 @@ public class PRThievingHelperOverlay extends Overlay
             TileObject secondaryStall = plugin.getSecondaryStallToHighlight();
             StallTypes secondaryStallType = plugin.getSecondaryStallType();
 
+            if(primaryStall == null || secondaryStall == null) {
+                return null;
+            }
+
             if(config.enableTextAttempts())
             {
                 renderStallAttempts(graphics, primaryStall, primaryStallType, config.primaryHighlightColor());

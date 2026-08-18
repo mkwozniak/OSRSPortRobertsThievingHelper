@@ -279,11 +279,23 @@ public interface PRThievingHelperConfig extends Config
 	}
 
 	@ConfigItem(
+			keyName = "soundForUnwatchedAtExpDrop",
+			name = "Sound For Unwatched on Last XP Drop",
+			description = "Plays a sound when you've received the last possible XP Drop for a stall.",
+			section = notifierSettings,
+			position = 20
+	)
+	default boolean soundForWatchedAtExpDrop()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 			keyName = "notifierFlashColor",
 			name = "Screen Flash Color",
 			description = "The Screen Flash Color",
 			section = notifierSettings,
-			position = 20
+			position = 21
 	)
 	@Alpha
 	default Color notifierFlashColor()
@@ -296,7 +308,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Screen Flash Speed",
 			description = "The Screen Flash Speed",
 			section = notifierSettings,
-			position = 21
+			position = 22
 	)
 	default double notifierFlashSpeed()
 	{
@@ -308,7 +320,7 @@ public interface PRThievingHelperConfig extends Config
 			name = "Screen Flash Strength",
 			description = "The Screen Flash Color Strength",
 			section = notifierSettings,
-			position = 22
+			position = 23
 	)
 	@Range(
 			min = 1,
